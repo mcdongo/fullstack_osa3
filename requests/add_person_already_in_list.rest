@@ -1,7 +1,7 @@
-POST http://localhost:3001/api/persons
+POST https://fullstack-testi.herokuapp.com/api/persons
 Content-Type: application/json
 
 {
-    "name": "Arto Hellas",
+    "name": "Arto Hellsas",
     "number": "123123123"
 }

@@ -12,28 +12,16 @@ app.use(express.static('build'))
 
 app.use(morgan('tiny'))
 
-let persons = [
-    {
-        id: 1,
-        name: "Arto Hellas",
-        number: "040-123456"
-    },
-    {
-        id: 2,
-        name: "Ada Lovelace",
-        number: "39-44-532523"
-    },
-    {
-        id: 3,
-        name: "Dan Abramov",
-        number: "12-43-234345"
-    },
-    {
-        id: 4,
-        name: "Mary Poppendick",
-        number: "39-23-6423122"
+const errorHandler = (error, req, res, next) => {
+    console.log(error.message)
+
+    if (error.name === 'CastError') {
+        return res.status(400).send({ error: 'malformatted id' })
     }
-]
+
+    next(error)
+}
+app.use(errorHandler)
 
 app.get('/api/persons', (req, res) => {
     Entry.find({}).then(entries => {
@@ -47,10 +35,16 @@ app.get('/info', (req, res) => {
     <p>${new Date()}</p>`)
 })
 
-app.get('/api/persons/:id', (req, res) => {
-    Entry.findById(req.params.id).then(person => {
-        res.json(person)
+app.get('/api/persons/:id', (req, res, next) => {
+    Entry.findById(req.params.id)
+        .then(person => {
+            if (person) {
+                res.json(person)
+            } else {
+                res.status(404).end()
+            }
     })
+    .catch(error => next(error))
 })
 
 app.post('/api/persons', (req, res) => {
@@ -63,7 +57,6 @@ app.post('/api/persons', (req, res) => {
     }
 
     const person = new Entry({
-        id: Math.round(Math.random()*1000),
         name: body.name,
         number: body.number
     })
@@ -73,11 +66,27 @@ app.post('/api/persons', (req, res) => {
     })
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    persons = persons.filter(person => person.id !== id)
+app.delete('/api/persons/:id', (req, res, next) => {
+    Entry.findByIdAndRemove(req.params.id)
+        .then(result => {
+            res.status(204).end()
+        })
+        .catch(error => next(error))
+})
 
-    res.status(204).end()
+app.put('/api/persons/:id', (req, res, next) => {
+    const body = req.body
+
+    const person = {
+        name: body.name,
+        number: body.number
+    }
+
+    Entry.findByIdAndUpdate(req.params.id, person, { new: true })
+        .then(updatedPerson => {
+            res.json(updatedPerson)
+        })
+        .catch(error => next(error))
 })
 
 const PORT = process.env.PORT

@@ -1,7 +1,9 @@
+require('dotenv').config()
 const { response } = require('express')
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
+const Entry = require('./models/entry')
 const app = express()
 
 app.use(express.json())
@@ -34,7 +36,9 @@ let persons = [
 ]
 
 app.get('/api/persons', (req, res) => {
-    res.json(persons)
+    Entry.find({}).then(entries => {
+        res.json(entries)
+    })
 })
 
 app.get('/info', (req, res) => {
@@ -44,16 +48,9 @@ app.get('/info', (req, res) => {
 })
 
 app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const person = persons.find(person => person.id === id)
-
-    if (person) {
-        res.send(`<p>${person.name}</p>
-        <p>${person.number}</p>
-        `)
-    } else {
-        res.status(404).end()
-    }
+    Entry.findById(req.params.id).then(person => {
+        res.json(person)
+    })
 })
 
 app.post('/api/persons', (req, res) => {
@@ -65,20 +62,15 @@ app.post('/api/persons', (req, res) => {
         })
     }
 
-    if (persons.find(person => (person.name === body.name))) {
-        return res.status(409).json({
-            error: "name must be unique"
-        })
-    }
-
-
-    const person = {
+    const person = new Entry({
         id: Math.round(Math.random()*1000),
         name: body.name,
         number: body.number
-    }
-    persons = persons.concat(person)
-    res.json(person)
+    })
+
+    person.save().then(savedPerson => {
+        res.json(savedPerson)
+    })
 })
 
 app.delete('/api/persons/:id', (req, res) => {
@@ -88,7 +80,7 @@ app.delete('/api/persons/:id', (req, res) => {
     res.status(204).end()
 })
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () =>{
     console.log(`Server running on port ${PORT}`)
 })
